@@ -1,0 +1,23 @@
+{
+  "challenged_artifact": "agent-output/copilot-agent-execution-platform/02-architecture-assessment.md",
+  "artifact_type": "architecture",
+  "review_focus": "architecture-reliability",
+  "pass_number": 2,
+  "challenge_summary": "Round 0 Service Bus Premium remediation is partially applied: the diagram, cost estimate, and implementation handoff now use Premium, but architecture reliability and decision sections still state Service Bus Standard. No new independent must-fix items were found; deferred Round 1 should-fix items were not repeated.",
+  "compact_for_parent": "Pass 2 (architecture-reliability) | HIGH | 1 must_fix, 0 should_fix | Key: Stale Service Bus Standard references keep PE fix unresolved",
+  "risk_level": "high",
+  "must_fix_count": 1,
+  "should_fix_count": 0,
+  "suggestion_count": 0,
+  "issues": [
+    {
+      "severity": "must_fix",
+      "category": "governance_gap",
+      "title": "Stale Service Bus Standard references keep PE fix unresolved",
+      "description": "The Round 1 revision correctly changes the diagram, resource SKU recommendation, implementation handoff, and cost estimate to Service Bus Premium. However, the Reliability Assessment still lists 'Service Bus Standard zone-redundant within swedencentral' and the Architecture Decision Summary still records 'Async run dispatch' as 'Service Bus Standard with sessions'. Because the decision summary is a source section for Step 4 planning, downstream IaC planning can still select Standard and recreate the original private endpoint/VNet integration deployment blocker.",
+      "failure_scenario": "If the iac-planner follows the Architecture Decision Summary instead of the later resource table, it provisions a Standard Service Bus namespace while the security baseline requires public network access disabled and a private endpoint. Standard cannot satisfy that private-networking requirement, so deployment or policy validation fails at the Service Bus namespace/private endpoint phase.",
+      "artifact_section": "Reliability Assessment; Architecture Decision Summary",
+      "suggested_mitigation": "Replace all remaining Service Bus Standard references in the architecture assessment with Service Bus Premium (1 messaging unit), including the Reliability Assessment strength and the Async run dispatch decision row. Keep the Premium private endpoint rationale and $1,971/mo refreshed cost baseline aligned across every source-of-truth table before approving Step 4."
+    }
+  ]
+}

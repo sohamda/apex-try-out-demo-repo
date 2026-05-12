@@ -1,0 +1,104 @@
+{
+  "challenged_artifact": "agent-output/copilot-agent-execution-platform/02-architecture-assessment.md",
+  "artifact_type": "architecture",
+  "review_focus": "cost-feasibility",
+  "pass_number": 3,
+  "challenge_summary": "The architecture is not yet cost-feasible for approval at the stated growth path. The $1,306 MVP estimate is internally traceable, and the Front Door WAF assumption is mostly supported by current Premium pricing, but the architecture approval text overstates budget fit: the 12-month 1,000-sandbox path, Log Analytics growth, Defender vCore scope, Service Bus Premium correction, and enforceable budget guardrails are not quantified tightly enough to keep the platform inside the $1,000-$5,000 monthly envelope.",
+  "compact_for_parent": "Pass 3 (cost-feasibility) | HIGH | 0 must_fix, 8 should_fix | Key: none",
+  "risk_level": "high",
+  "must_fix_count": 0,
+  "should_fix_count": 8,
+  "suggestion_count": 2,
+  "issues": [
+    {
+      "severity": "should_fix",
+      "category": "untested_assumption",
+      "title": "The 1,000-sandbox cost path is not budget-feasible as stated",
+      "description": "The architecture says the $1,306 monthly baseline will push toward about $2,500/month at the 12-month projected load of 1,000 concurrent sandboxes. The companion cost estimate, however, is based on a 4-node D4as_v5 Spot sandbox pool that assumes only 10-40 concurrent sandboxes, while the requirements project 1,000 concurrent sandboxes and 15 GB/day of audit logs by month 12. Scaling the sandbox pool from 4 nodes to the approximate 100-node order implied by the 10-40 concurrency baseline adds materially more than the stated delta before Defender vCore, Log Analytics, NAT, ACR, Service Bus, and Cosmos growth are considered.",
+      "failure_scenario": "The architecture is approved on the belief that month-12 scale remains near $2,500/month. When adoption approaches hundreds of concurrent sandboxes, the autoscaler expands Spot nodes, Defender bills all protected worker-node vCores, Log Analytics ingestion follows audit volume, and the monthly run rate crosses the $5,000 upper envelope before product or tenant throttles are enforceable.",
+      "artifact_section": "Executive Summary; Requirements Validation; Cost Assessment; Architecture Decision Summary",
+      "suggested_mitigation": "Replace the single baseline estimate with explicit scenarios for MVP, 100, 200, 500, and 1,000 concurrent sandboxes. For each scenario, quantify sandbox nodes, warm-pool size, per-sandbox CPU/memory, Defender vCores, LA ingestion, NAT/Front Door traffic, ACR pulls/storage, Service Bus messages/sessions, and Cosmos RU/storage, then mark which scenario is actually approved within the $1,000-$5,000 envelope."
+    },
+    {
+      "severity": "should_fix",
+      "category": "missing_failure_mode",
+      "title": "Budget guardrails are named but not enforceable enough for approval",
+      "description": "The requirements define G1-BUDGET-CAPS with budget alerts at 80%, 100%, and 120% plus auto-throttle or stop behavior. The architecture mentions Azure Policy on max node-pool size, Log Analytics daily cap, and Defender scope, but the resource handoff does not include Azure Budget resources, forecast alerts, tenant/run cost caps, budget notification recipients, or the concrete max-node and throttle values needed to keep autoscale inside the approved envelope.",
+      "failure_scenario": "A demand spike or abusive tenant drives Service Bus depth high enough for KEDA and cluster autoscaler to add sandbox nodes. The architecture has no approved numeric max-node ceiling, forecast budget action, or tenant stop policy, so cost growth is detected only after the invoice or after the soft budget is already exceeded.",
+      "artifact_section": "Architecture Decision Summary; Implementation Handoff; Monitoring Requirements for Implementation; Approval Gate",
+      "suggested_mitigation": "Add deployable cost guardrails to the architecture handoff: Azure Consumption Budget with 80/100/120 forecast and actual alerts, parameterized action groups, per-tenant/run budget enforcement, cluster autoscaler maxNodeCount per pool, Azure Policy or admission controls that prevent larger node pools/SKUs without approval, and a documented kill-switch path for forecast breaches."
+    },
+    {
+      "severity": "should_fix",
+      "category": "architectural_weakness",
+      "title": "Log Analytics cap wording allows a 30x telemetry cost miss",
+      "description": "The architecture's SKU table describes Log Analytics as a 50 GB/month cap, but the implementation handoff sets workspaceCapping.dailyQuotaGb to 50. A 50 GB daily cap allows up to roughly 1,500 GB/month, while the cost estimate prices only 50 GB/month at $115. The requirements also project audit log volume rising to 15 GB/day by 12 months, which is about 450 GB/month before AKS, KEDA, Front Door, egress broker, and platform diagnostics are included.",
+      "failure_scenario": "Step 4 implements dailyQuotaGb: 50 exactly as handed off. Verbose sandbox audit logging reaches 15 GB/day, remains under the daily cap, and produces hundreds of GB/month in Analytics ingestion, retention, export, and query costs. The architecture still reports a $115/month LA line even though the deployed cap permits a multi-thousand-dollar monthly telemetry line.",
+      "artifact_section": "Resource SKU Recommendations; Monitoring Requirements for Implementation; Cost Assessment",
+      "suggested_mitigation": "Reconcile the unit mismatch before approval. Define a monthly telemetry budget translated into a daily cap, table-specific Basic/Auxiliary/Analytics plans, data collection transformations, export/archive cost, retention by table, and emergency sampling rules. Price 50 GB/month, 90 GB/month, 450 GB/month, and daily-cap worst-case scenarios."
+    },
+    {
+      "severity": "should_fix",
+      "category": "hidden_dependency",
+      "title": "Defender for Containers cost scope conflicts with sandbox scale",
+      "description": "The architecture treats Defender for Containers as mandatory for sandbox security posture, while the companion cost estimate prices only 10 vCPUs for system and control-plane pools. Current Defender for Cloud pricing bills Defender for Containers by Kubernetes worker-node vCore consumption across the month. If sandbox nodes are protected, the cost grows with the Spot sandbox pool; if they are excluded, the highest-risk workload surface loses the intended Defender coverage already challenged in pass 1.",
+      "failure_scenario": "The platform enables Defender for Containers on the AKS cluster and scales sandbox workers toward hundreds of vCores. Defender cost grows linearly and consumes the remaining budget headroom. Alternatively, operators try to hold the estimate by excluding sandbox nodes and create a security blind spot in the untrusted tenant runtime.",
+      "artifact_section": "Security Assessment; Cost Assessment; Resource SKU Recommendations; Resources to Provision",
+      "suggested_mitigation": "State the exact Defender scope and price it against sandbox scenarios. If Defender covers all worker nodes, include vCore costs at MVP, 100, 200, 500, and 1,000 sandbox concurrency. If any sandbox pool is excluded, record explicit risk acceptance and compensating controls rather than relying on the current $69/month estimate."
+    },
+    {
+      "severity": "should_fix",
+      "category": "scope_risk",
+      "title": "Service Bus Premium fix invalidates the approved cost baseline",
+      "description": "Pass 2 found that Service Bus Standard is incompatible with the architecture's private endpoint, public-network-disabled, and zone-resilient dispatch assumptions. The architecture pass 3 cost story still relies on the $12/month Standard line. Correcting the dispatch backbone to Premium messaging units will materially increase the fixed floor and may affect the claim that the security baseline floor is about $900/month and total MVP cost is about $1,306/month.",
+      "failure_scenario": "The parent accepts the pass 2 reliability fix and Step 4 upgrades Service Bus to Premium, but the architecture approval and budget gate are not recalculated. The deployed design has a higher fixed monthly cost than stakeholders approved, and the low-end budget tension worsens before any sandbox growth occurs.",
+      "artifact_section": "Resource SKU Recommendations; Cost Assessment; Implementation Handoff",
+      "suggested_mitigation": "Update the architecture and companion estimate to model Service Bus Premium with the required messaging units, private endpoint, zone behavior, and throughput. Recompute the non-discretionary floor and budget status after this correction before Step 4 planning."
+    },
+    {
+      "severity": "should_fix",
+      "category": "hidden_dependency",
+      "title": "Front Door WAF is included, but request and origin meters are omitted",
+      "description": "The cost estimate's assumption that WAF and Private Link pricing are included in Azure Front Door Premium is consistent with current Azure Front Door Premium pricing. The architecture still prices Front Door as Premium base plus 500 GB client egress only, while Azure Front Door billing also includes request pricing and edge-to-origin data transfer. The requirements include live UI/API monitoring and growing daily active users, but no request-volume scenario is modeled.",
+      "failure_scenario": "The MVP front door handles frequent agent status polling, log streaming, API calls, and webhook traffic. Even if WAF policy itself is included in Premium, request charges and origin-transfer meters grow with platform usage and the approved $371/month Front Door line no longer matches the actual bill.",
+      "artifact_section": "Cost Assessment; Resource SKU Recommendations; Recommended Architecture",
+      "suggested_mitigation": "Revise the architecture cost note to say WAF and Private Link are included in Premium, then add explicit Front Door request and edge-to-origin data assumptions for MVP, 6-month, and 12-month usage. Include caching/compression controls and a live-stream design decision because polling versus streaming changes request cost materially."
+    },
+    {
+      "severity": "should_fix",
+      "category": "missing_failure_mode",
+      "title": "Cosmos Serverless storage and backup growth are not tied to retention requirements",
+      "description": "The architecture chooses Cosmos DB Serverless with PITR for run state, agents, and metadata, while the requirements include run transcripts and decisions at about 50 GB/month with 90-day retention plus audit logs retained for 365 days. The companion estimate prices only 20 GB of Cosmos data and 20 GB PITR without clarifying whether transcripts and decision history are stored in Cosmos, Storage, or Log Analytics. This leaves Cosmos storage, PITR, RU, and backup-overage exposure unresolved in the architecture decision.",
+      "failure_scenario": "Implementation stores conversation history, step checkpoints, and decision transcripts in Cosmos because the architecture names it as the run-state and metadata store. Data and PITR storage exceed the 20 GB assumption, RU costs rise with checkpoint frequency, and the team discovers after deployment that retention and query requirements cost substantially more than approved.",
+      "artifact_section": "Architecture Decision Summary; Resource SKU Recommendations; Reliability Assessment; Cost Assessment",
+      "suggested_mitigation": "Define the data placement model before approval: separate hot run state, transcripts, audit logs, artifacts, and billing events by service. Price Cosmos Serverless RU/storage/PITR for the chosen hot-state subset and price Storage or Log Analytics archive for long-retention records. Include a serverless-to-provisioned autoscale trigger if RU or storage patterns become steady."
+    },
+    {
+      "severity": "should_fix",
+      "category": "waf_blind_spot",
+      "title": "Budget status contradicts the raw cost source and lower-bound requirement",
+      "description": "The architecture approval gate says $1,306/month is within the $1,000-$5,000 envelope, but the raw cost JSON sets budget_exceeded to true and the requirements explicitly call the budget a soft envelope with tension at the $1,000 low end. The architecture frames utilization against the $5,000 upper bound, which masks that the baseline is already about 31% above the lower monthly target and that the non-discretionary floor leaves little room for real traffic.",
+      "failure_scenario": "Stakeholders approve the architecture believing the MVP has comfortable cost headroom. The first production-shaped workload, missing Service Bus Premium correction, or telemetry growth pushes spend far above the intended low-end target, creating a business surprise even though the architecture technically stayed below the upper soft cap at approval time.",
+      "artifact_section": "Requirements Validation; Executive Summary; Cost Assessment; Approval Gate",
+      "suggested_mitigation": "Change the approval gate to explicitly approve three numbers: zero/load floor, MVP baseline, and first growth scenario. Reconcile the raw budget_exceeded flag, state that the baseline exceeds the $1,000 lower target, and require stakeholder approval of the floor plus growth guardrails before planning proceeds."
+    },
+    {
+      "severity": "suggestion",
+      "category": "untested_assumption",
+      "title": "RI and Savings Plan timing should stay conservative",
+      "description": "The companion cost estimate quantifies RI savings for steady D2as_v5 pools, but the requirements prefer Reserved Instances at 12 months when load stabilizes. The architecture's node-pool shape may change after Service Bus Premium correction, warm-pool tuning, sandbox density validation, and observed AKS utilization. Early commitment could reduce cost agility for relatively small savings.",
+      "failure_scenario": "The team buys a 1-year commitment after six months, then changes node family, pool count, or runtime placement as sandbox sizing and Service Bus dispatch mature. The projected savings are not realized and reserved capacity becomes a constraint during redesign.",
+      "artifact_section": "Cost Assessment; Architecture Decision Summary; Companion Cost Estimate Savings Opportunities",
+      "suggested_mitigation": "Keep RI/Savings Plan as an optimization candidate, but require observed utilization, stable SKU selection, and an explicit approval checkpoint before purchase. Treat the 12-month point as the default timing unless a FinOps review shows durable usage earlier."
+    },
+    {
+      "severity": "suggestion",
+      "category": "scope_risk",
+      "title": "ACR storage and artifact-streaming growth need an explicit threshold",
+      "description": "The architecture relies on ACR Premium, Artifact Streaming, pinned sandbox images, and pre-pulled base layers to meet cold-start targets. The current fixed ACR Premium line may be adequate for MVP, but there is no threshold for image count, retained versions, artifact-streaming cache footprint, vulnerability scan overages, or storage cleanup that would trigger cost action.",
+      "failure_scenario": "Multiple agent runtime images, tenant-specific tool bundles, and retained pinned versions accumulate in ACR. The base Premium charge remains in the estimate, but storage and scan-related costs drift upward while cleanup would risk cold-start regressions.",
+      "artifact_section": "Performance Assessment; Resource SKU Recommendations; Cost Assessment",
+      "suggested_mitigation": "Add an ACR operating threshold: expected image count, average layer size, retained versions, retention policy, artifact-streaming cache expectation, and monthly review trigger. Keep it as an operational cost watch item unless the image footprint becomes material in the next cost scenario."
+    }
+  ]
+}

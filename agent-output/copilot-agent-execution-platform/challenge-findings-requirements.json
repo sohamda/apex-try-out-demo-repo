@@ -1,0 +1,96 @@
+{
+  "challenged_artifact": "agent-output/copilot-agent-execution-platform/01-requirements.md",
+  "artifact_type": "requirements",
+  "review_focus": "comprehensive",
+  "pass_number": 1,
+  "overall_assessment": "REVISED",
+  "challenge_summary": "The requirements capture the intended Azure footprint and flag several risks, but they still assume the core Copilot-backed execution model, sandbox containment, EU data-boundary posture, and cost controls can be solved later. Those assumptions are foundational for a multi-tenant platform that runs arbitrary code and external tools, so Step 1 should make them explicit gate requirements before architecture hardens around them.",
+  "compact_for_parent": "Pass 1 (comprehensive) | HIGH | 4 must_fix, 4 should_fix | Key: Validate Copilot usage model; Define sandbox exfiltration controls; Close EU data-boundary gaps",
+  "risk_level": "high",
+  "must_fix_count": 4,
+  "should_fix_count": 4,
+  "suggestion_count": 1,
+  "issues": [
+    {
+      "severity": "must_fix",
+      "category": "hidden_dependency",
+      "title": "Validate Copilot usage model before architecture assumes it",
+      "description": "The requirements make GitHub Copilot-backed agents the central product capability and list GitHub OAuth plus per-user PAT/Copilot subscription as the auth model, but they do not require validation that GitHub permits headless or automated agent execution at this scale, how per-user subscription entitlement is checked, or which token and API quota model applies. The artifact lists this as an open risk, yet it remains outside the functional acceptance criteria and gating decisions.",
+      "failure_scenario": "If GitHub Copilot terms, APIs, or entitlement checks do not allow the proposed headless fleet behavior, Step 2 may design an AKS and queue architecture around a runtime dependency that cannot legally or technically operate, forcing a major redesign after infrastructure planning.",
+      "artifact_section": "Functional Requirements / Integrations / Summary for Architecture Assessment",
+      "suggested_mitigation": "Add a must-have requirement and Step 2 gate to validate the approved GitHub Copilot integration path, acceptable automation model, per-user entitlement verification, token quota/rate limits, and fallback behavior when a user lacks a valid Copilot license or exhausts quota. Do not proceed to implementation planning until the dependency is resolved or a non-Copilot runtime alternative is defined."
+    },
+    {
+      "severity": "must_fix",
+      "category": "governance_gap",
+      "title": "Close EU data-boundary gaps for global and third-party services",
+      "description": "The requirements state EU-only residency and GDPR applicability, but global or external dependencies are only flagged for later review: Front Door, GitHub OAuth/Copilot, approved web search APIs, user-allowlisted MCP servers, Git remotes, telemetry sinks, and possible Entra external identity flows. For a platform processing source code, transcripts, tokens, and PII, Step 1 needs concrete requirements for cross-border transfer assessment, subprocessors, data processing agreements, and metadata residency, not only Azure region placement.",
+      "failure_scenario": "If agent prompts, source snippets, OAuth metadata, search queries, or MCP payloads traverse non-EU processors without documented legal basis and controls, the platform can fail GDPR commitments even while Cosmos DB and Storage remain in swedencentral.",
+      "artifact_section": "Compliance & Security Requirements / Data Residency / Integrations",
+      "suggested_mitigation": "Add GDPR/EU Data Boundary acceptance criteria covering each non-regional dependency: allowed data categories, processor/subprocessor status, DPA/SCC requirements where applicable, retention, logging redaction, region configuration, and tenant opt-out or deny-list controls for services that cannot meet EU-only handling."
+    },
+    {
+      "severity": "must_fix",
+      "category": "missing_failure_mode",
+      "title": "Define sandbox data-exfiltration controls beyond kernel isolation",
+      "description": "The requirements call for Kata/gVisor-style kernel isolation and per-pod egress allowlists, but arbitrary scripts, web search, MCP calls, Git operations, and tool execution create prompt-injection and data-exfiltration paths that kernel isolation alone does not address. There is no explicit requirement for outbound proxy inspection, DNS control, secret redaction, scoped credentials, filesystem boundaries, syscall/capability restrictions, or tests that malicious prompts cannot exfiltrate tenant code or secrets through approved tools.",
+      "failure_scenario": "A compromised MCP server or prompt-injected web page can instruct an agent to send source code or secrets to an allowed endpoint, while the pod remains correctly kernel-isolated and the traffic passes the high-level egress allowlist.",
+      "artifact_section": "Functional Requirements / Compliance & Security Requirements / Network Security",
+      "suggested_mitigation": "Expand sandbox requirements into a threat-model-backed control set: deny-by-default egress through a broker/proxy, DNS enforcement, per-run least-privilege credentials, no hostPath or privileged containers, seccomp/AppArmor/capability drops, read-only base filesystem where feasible, secret redaction in logs, approved tool schemas, and adversarial isolation tests for prompt-injection and exfiltration."
+    },
+    {
+      "severity": "must_fix",
+      "category": "scope_risk",
+      "title": "Add abuse-prevention and safety gates for arbitrary automation",
+      "description": "The platform allows users to launch autonomous agent fleets that can run scripts, call web services, invoke MCP servers, search the web, and modify repositories. The requirements include pause/stop/resume and audit logs, but omit functional requirements for abuse prevention, content moderation, malware/spam prevention, tenant onboarding controls, human approval before high-risk actions, and platform-level rate limits across tools and outbound traffic.",
+      "failure_scenario": "A tenant can use the service to run credential-stuffing scripts, generate abusive traffic through approved tools, or commit destructive repository changes before any operator notices, creating legal, security, and provider-ban risk for the platform.",
+      "artifact_section": "Functional Requirements / Operational Requirements",
+      "suggested_mitigation": "Add must-have safety requirements: per-tenant and per-user rate limits, abuse detection, content and malware policy enforcement, human-in-the-loop approvals for risky actions such as external writes or credential use, emergency tenant suspension, provider-specific acceptable-use constraints, and audit events tied to enforcement decisions."
+    },
+    {
+      "severity": "should_fix",
+      "category": "architectural_weakness",
+      "title": "Specify multi-tenant blast-radius boundaries and noisy-neighbor quotas",
+      "description": "The requirements demand per-tenant isolation but do not specify the required tenancy model for AKS namespaces, node pools, identities, Service Bus queues/topics, Cosmos DB partition keys, Key Vault secret scopes, artifact containers, or Log Analytics access. They also omit tenant-level quotas for concurrent sandboxes, CPU/memory, queue depth, outbound calls, tokens, storage, and log ingestion.",
+      "failure_scenario": "One tenant can exhaust AKS nodes, Service Bus throughput, Cosmos RU, Log Analytics ingestion, or external API quotas, degrading other tenants while still complying with per-run budget controls.",
+      "artifact_section": "Functional Requirements / User Types / Scalability",
+      "suggested_mitigation": "Add measurable multi-tenancy requirements for isolation units, partitioning keys, per-tenant identities, namespace/resource quotas, queue partitioning, tenant-scoped observability, and max blast radius for a compromised or runaway tenant."
+    },
+    {
+      "severity": "should_fix",
+      "category": "untested_assumption",
+      "title": "Reconcile budget with AKS, security, logging, and token footprint",
+      "description": "The artifact correctly flags budget tension, but the requirements still combine AKS sandboxing, Front Door Premium/WAF, Defender for Containers, private endpoints, Cosmos DB, Service Bus, Log Analytics, 90 to 365 day retention, and potentially high Copilot/web-search token usage inside a $1,000-$5,000 monthly envelope. Step 1 does not define the MVP workload cap, maximum node count, maximum log ingestion, or spend circuit breakers needed to keep the architecture feasible.",
+      "failure_scenario": "At 10-100 concurrent sandboxes, verbose audit logging, Defender, NAT/egress, and third-party token/search charges can exceed the monthly cap before Step 2 has a concrete basis for SKU selection or kill-switch design.",
+      "artifact_section": "Budget / Non-Functional Requirements / Operational Requirements",
+      "suggested_mitigation": "Add budget acceptance criteria: maximum MVP concurrency at each spend tier, per-tenant and platform spend caps, token/search/tool budgets, Log Analytics daily cap and sampling strategy, maximum retention by data class, required Azure Budget alerts at 80/100/120 percent, and automatic throttling or run termination on forecast breach."
+    },
+    {
+      "severity": "should_fix",
+      "category": "missing_failure_mode",
+      "title": "Define run lifecycle idempotency and retry semantics",
+      "description": "The requirements mention Service Bus, run state, stop conditions, and live monitoring, but do not define how long-running agent runs behave under duplicate queue delivery, worker crash, sandbox eviction, node drain, partial Git commits, partial artifact upload, or user pause/resume while tools are executing. These are core operational failure modes for autonomous fleet execution.",
+      "failure_scenario": "A Service Bus retry after a worker crash can resume a run from an ambiguous state, repeat a destructive script or Git operation, double-charge token usage, or leave orphaned sandboxes and artifacts.",
+      "artifact_section": "Functional Requirements / Operational Requirements / Backup & Disaster Recovery",
+      "suggested_mitigation": "Add run-state requirements for idempotency keys, exactly-once user-visible outcomes, checkpoint frequency, retry limits, compensation behavior, orphan cleanup, resume semantics, and immutable event sourcing for tool and script steps."
+    },
+    {
+      "severity": "should_fix",
+      "category": "waf_blind_spot",
+      "title": "Make observability actionable for security and cost runaway",
+      "description": "Monitoring requirements name Application Insights, Log Analytics, dashboards, and alerts, but do not define the security and cost signals required for this workload: anomalous egress, unexpected MCP/tool domains, secret access spikes, per-tenant token burn, sandbox orphan age, queue poison rates, WAF blocks, and tenant-level throttling decisions. Audit logs are required, but alertable detection requirements are not.",
+      "failure_scenario": "A compromised agent fleet slowly exfiltrates data or consumes tokens through allowed tools for hours because logs exist but no detection rule or budget anomaly signal pages an operator or stops the tenant.",
+      "artifact_section": "Operational Requirements / Monitoring & Alerting",
+      "suggested_mitigation": "Add required detections and SLOs for egress anomalies, tenant cost/token anomalies, secret access anomalies, queue poison/dead-letter growth, sandbox orphaning, tool allowlist violations, WAF events, and automated containment actions."
+    },
+    {
+      "severity": "suggestion",
+      "category": "waf_blind_spot",
+      "title": "Capture tenant data classification and deletion evidence requirements",
+      "description": "The data table lists sensitivity, volume, retention, and EU residency, but tenant data classes such as prompts, model responses, source code diffs, MCP payloads, and generated artifacts may need finer classification and evidence trails for right-to-erasure completion. This can be matured during later architecture and as-built documentation, but Step 1 would benefit from naming the evidence expectation.",
+      "failure_scenario": "A customer requests deletion evidence and the platform can delete primary records but cannot prove which derived artifacts, logs, or external processor payloads were included.",
+      "artifact_section": "Compliance & Security Requirements / Data Types",
+      "suggested_mitigation": "Consider adding a data-classification matrix and deletion-evidence requirement that maps each data type to storage location, processor, retention, erasure method, and audit proof."
+    }
+  ]
+}

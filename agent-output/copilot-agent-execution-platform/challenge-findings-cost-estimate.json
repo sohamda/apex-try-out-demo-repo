@@ -1,0 +1,86 @@
+{
+  "challenged_artifact": "agent-output/copilot-agent-execution-platform/03-des-cost-estimate.md",
+  "artifact_type": "cost-estimate",
+  "review_focus": "comprehensive",
+  "pass_number": 1,
+  "challenge_summary": "The markdown estimate matches the raw JSON headline total, but it needs revision before gate use because several architecture-implied cost surfaces are either omitted, treated as bundled without proof, or not modeled against the stated sandbox and telemetry growth path.",
+  "compact_for_parent": "Pass 1 (comprehensive) | MEDIUM | 0 must_fix, 7 should_fix | Key: none",
+  "risk_level": "medium",
+  "must_fix_count": 0,
+  "should_fix_count": 7,
+  "suggestion_count": 1,
+  "issues": [
+    {
+      "severity": "should_fix",
+      "category": "hidden_dependency",
+      "title": "NAT Gateway estimate omits required public IP or prefix cost",
+      "description": "The architecture provisions a NAT Gateway as the controlled sandbox egress path, and the cost estimate prices only the gateway hourly meter plus processed data. A NAT Gateway requires at least one Standard public IP address or public IP prefix, but no public IP line item appears in the raw JSON or markdown breakdown.",
+      "failure_scenario": "If Step 4 implements the NAT Gateway with a required public IP or prefix, the deployed monthly bill will exceed the approved estimate immediately, and the cost artifact will no longer reconcile to the actual resource set.",
+      "artifact_section": "Detailed Cost Breakdown / Line Items; Requirements to Cost Mapping",
+      "suggested_mitigation": "Add an explicit Standard Public IP or Public IP Prefix line item for NAT Gateway egress, or document an already-existing shared egress IP assumption and its allocation model. Update the raw JSON source of truth and markdown total together."
+    },
+    {
+      "severity": "should_fix",
+      "category": "scope_risk",
+      "title": "Cosmos storage and PITR sizing conflicts with transcript volume requirements",
+      "description": "The raw JSON prices Cosmos DB at 50M RU, 20 GB data, and 20 GB PITR. The requirements identify agent run transcripts and decisions at about 50 GB per month with 90-day retention, and the architecture names Cosmos as the run state, agents, and metadata store. The estimate does not explain whether transcripts are excluded from Cosmos, stored elsewhere, or compressed/summarized before persistence.",
+      "failure_scenario": "If run transcripts and decision history are stored in Cosmos as implied by the state-store design, data plus continuous-backup storage can grow far beyond the 20 GB assumption, causing both storage and PITR charges to be materially understated before the MVP reaches the stated transcript volume.",
+      "artifact_section": "Detailed Cost Breakdown / Assumptions; Cosmos DB Capacity Mode Comparison",
+      "suggested_mitigation": "Split run-state, transcript, and audit-log storage assumptions by service. If transcripts are not in Cosmos, state the storage target and price it. If they are in Cosmos, recalculate data and PITR storage for at least 90 days of MVP transcript volume and include a 6- and 12-month sensitivity case."
+    },
+    {
+      "severity": "should_fix",
+      "category": "missing_failure_mode",
+      "title": "Log Analytics and audit retention costs are under-modeled for growth",
+      "description": "The estimate prices 50 GB/month of Log Analytics ingestion and 30-day retention, while requirements call for audit logs retained for 365 days and projections reach 3 GB/day at 6 months and 15 GB/day at 12 months. The markdown mentions archive to Storage but the raw JSON has no dedicated export/archive, retention, or storage growth line tied to those volumes.",
+      "failure_scenario": "At the 6-month projection, 3 GB/day is about 90 GB/month before verbose AKS, KEDA, and audit streams; at 12 months, 15 GB/day is about 450 GB/month. Without scenario pricing, the budget-fit narrative can approve a baseline that is quickly overtaken by telemetry charges and long-retention storage.",
+      "artifact_section": "Cost Risk Indicators; Detailed Cost Breakdown / Assumptions",
+      "suggested_mitigation": "Add telemetry scenarios for MVP, 6-month, and 12-month ingestion plus retention/export storage. Price archive storage for audit logs separately from hot Log Analytics ingestion, and align the daily cap with the requirement that blocked/throttled/audit events remain queryable and retained."
+    },
+    {
+      "severity": "should_fix",
+      "category": "untested_assumption",
+      "title": "Sandbox autoscale cost is acknowledged but not quantified",
+      "description": "The requirements project concurrent sandboxes from 10-100 at MVP to 1,000 by 12 months, and the cost artifact warns sandbox autoscale plus Defender vCore scope will grow. However, the approved total remains a single 4-node Spot baseline with no priced max-node ceiling, warm-pool size, or Defender vCore growth scenario.",
+      "failure_scenario": "If the platform scales toward the 6- or 12-month concurrency targets, AKS Spot nodes, Defender for Containers vCore charges, NAT data processing, ACR pulls, and Log Analytics ingestion can move the monthly run rate well above the baseline before budget gates trigger.",
+      "artifact_section": "Cost At-a-Glance; Assumptions and Uncertainty; Cost Risk Indicators",
+      "suggested_mitigation": "Add a scenario table for approved MVP floor, 100 concurrent sandboxes, 200 concurrent sandboxes, and 1,000 concurrent sandboxes. Include sandbox node count, warm-pool assumptions, Defender vCore count, LA ingestion, NAT data, and the policy-enforced autoscale maximum used to cap spend."
+    },
+    {
+      "severity": "should_fix",
+      "category": "hidden_dependency",
+      "title": "ACR storage and artifact-streaming assumptions are not priced or bounded",
+      "description": "ACR Premium is priced as a base registry unit, and the architecture depends on Artifact Streaming, pinned sandbox images, and pre-pulled agent runtime layers to hit the cold-start target. The estimate does not state expected image/layer storage, artifact growth, retention, or whether all expected ACR storage remains inside the Premium included capacity.",
+      "failure_scenario": "If sandbox images, pinned versions, and artifact-streaming layers exceed included registry capacity or require aggressive retention, ACR costs can grow outside the approved estimate while the cold-start mitigation remains mandatory for the performance requirement.",
+      "artifact_section": "Detailed Cost Breakdown / Line Items; Resource SKU Recommendations / Container Registry",
+      "suggested_mitigation": "Add an ACR storage assumption with image count, average image size, retained versions, and artifact-streaming cache expectations. If the expected footprint is covered by the Premium included quota, state that explicitly and add a threshold where overage pricing begins."
+    },
+    {
+      "severity": "should_fix",
+      "category": "governance_gap",
+      "title": "Defender CSPM commitment is ambiguous in the cost model",
+      "description": "The architecture recommends enabling Defender CSPM at subscription scope and the cost at-a-glance claims a Defender baseline, but the priced security items are only Defender for Containers, Key Vault, and Storage. The estimate does not distinguish free Foundational CSPM from paid Defender CSPM or state which posture-management plan Step 4 should implement.",
+      "failure_scenario": "If Step 4 enables a paid Defender CSPM plan to satisfy the architecture recommendation, the actual subscription security cost will exceed the approved estimate. If only free Foundational CSPM is intended, implementation may overbuild or reviewers may assume paid posture controls that are not actually funded.",
+      "artifact_section": "Decision Summary; Detailed Cost Breakdown / Line Items; Architecture Security Recommendations",
+      "suggested_mitigation": "Clarify the exact Defender for Cloud posture tier: free Foundational CSPM at zero incremental cost or paid Defender CSPM with an explicit line item. Align the architecture recommendation, raw JSON, and markdown wording."
+    },
+    {
+      "severity": "should_fix",
+      "category": "waf_blind_spot",
+      "title": "Budget-fit narrative overstates comfort against the lower budget bound",
+      "description": "The cost-at-a-glance frames $1,306/month as 26% of the $5,000 upper bound, but the requirements call the budget a $1,000-$5,000 soft envelope and explicitly flag tension at the low end. The estimate also states a roughly $900 non-discretionary floor before traffic, leaving little room above the lower bound for telemetry, sandbox growth, or missing dependencies.",
+      "failure_scenario": "A stakeholder may approve the architecture believing the MVP has broad budget headroom, while the first real workload or omitted platform dependency pushes spend meaningfully above the low-end monthly target.",
+      "artifact_section": "Cost At-a-Glance; Cost Risk Indicators; Quick Decision Matrix",
+      "suggested_mitigation": "Reframe budget status around both lower and upper bounds: baseline is about 31% above the $1,000 lower target and about 26% of the $5,000 ceiling. Add a decision gate that explicitly approves the non-discretionary floor and the first growth scenario, not just the baseline total."
+    },
+    {
+      "severity": "suggestion",
+      "category": "untested_assumption",
+      "title": "Reserved Instance timing conflicts with the requirements preference",
+      "description": "The requirements say Reserved Instances are acceptable at 12 months when load stabilizes, while the cost estimate presents 1-year RI as a green 'Go (m6+)' option. The savings math is useful, but the commitment timing is more aggressive than the earlier budget preference and may not account for VM SKU changes after warm-pool and autoscale tuning.",
+      "failure_scenario": "If a 1-year reservation is purchased after 6 months and the platform later changes node SKU, pool shape, or sandbox strategy, the savings claim may not materialize and the commitment can reduce cost agility.",
+      "artifact_section": "Quick Decision Matrix; Savings Opportunities; Notes / RI eligibility",
+      "suggested_mitigation": "Keep RI savings quantified but change the recommendation to 'evaluate at 6 months, purchase no earlier than stable 12-month utilization unless explicitly approved.' Tie any RI purchase to observed node-family utilization and autoscale ceilings."
+    }
+  ]
+}

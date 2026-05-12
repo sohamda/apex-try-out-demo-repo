@@ -1,0 +1,32 @@
+{
+  "challenged_artifact": "agent-output/copilot-agent-execution-platform/02-architecture-assessment.md",
+  "artifact_type": "architecture",
+  "review_focus": "security-governance",
+  "pass_number": 1,
+  "challenge_summary": "Round 0 pass-1 must-fix status: governance discovery is now a hard gate before Step 4; shared Key Vault prefix scoping was replaced with per-tenant Key Vaults; sandbox egress now has a forced-egress design intent; EU and Copilot dependency gates were added to the approval gate. One new must-fix remains because the revised egress path names an Envoy AKS node pool as the UDR target without defining a deployable Azure virtual-appliance next hop. One new should-fix remains around the per-tenant Key Vault private endpoint/RBAC lifecycle introduced by the revision.",
+  "compact_for_parent": "Pass 1 (security-governance) | HIGH | 1 must_fix, 1 should_fix | Key: Envoy UDR next hop not deployable",
+  "risk_level": "high",
+  "must_fix_count": 1,
+  "should_fix_count": 1,
+  "suggestion_count": 0,
+  "issues": [
+    {
+      "severity": "must_fix",
+      "category": "architectural_weakness",
+      "title": "Envoy UDR next hop is not a deployable egress enforcement path",
+      "description": "The Round 1 revision fixes the original egress-control intent by requiring UDR-forced sandbox egress through Envoy, with NAT Gateway limited to non-sandbox subnets. However, the artifact says the sandbox subnet routes 0.0.0.0/0 to a dedicated Envoy egress proxy node pool. Azure route tables require a valid next-hop construct such as Azure Firewall, a virtual appliance private IP, or another supported next-hop type; an AKS node pool, pod, or Kubernetes Service is not itself a stable UDR next hop unless the architecture defines a concrete NVA pattern with a static internal load balancer/private IP and forwarding/proxy behavior. As written, Step 4 cannot reliably encode the route, or implementers may fall back to NAT/direct egress and recreate the bypass risk the revision intended to close.",
+      "failure_scenario": "The IaC planner translates the handoff literally and tries to route sandbox subnet 0.0.0.0/0 to the Envoy node pool. The route cannot be represented as a valid Azure UDR nextHopIpAddress, or it targets an unstable node/pod address. During deployment or failover, sandbox traffic bypasses Envoy through default internet/NAT egress or is blackholed, so direct-IP, alternate-DNS, or covert-channel exfiltration controls are not actually enforced.",
+      "artifact_section": "Security Assessment; Architecture Decision Summary; Resources to Provision; Security Requirements for Implementation",
+      "suggested_mitigation": "Choose and document a deployable egress enforcement primitive before Step 4. Either use Azure Firewall Standard as the UDR next hop, or define Envoy as an explicit virtual-appliance pattern with a Standard internal load balancer static private IP, route table nextHopType VirtualAppliance and nextHopIpAddress set to that IP, high availability across zones, health-probe/fail-closed behavior, NSG rules denying direct internet egress from sandbox subnets, no NAT Gateway association for sandbox subnets, and CI tests proving blocked-domain, direct-IP, alternate-DNS, and covert-channel attempts fail. Update the architecture diagram and handoff so the UDR target is the concrete appliance IP, not an AKS node pool label."
+    },
+    {
+      "severity": "should_fix",
+      "category": "governance_gap",
+      "title": "Per-tenant Key Vault onboarding needs dynamic PE and RBAC lifecycle",
+      "description": "The shared-vault isolation blocker is resolved in principle by moving tenant secrets to one Key Vault per active tenant, but the revised artifact still carries a static private-endpoint count and does not describe the onboarding lifecycle that creates each tenant vault, private endpoint, private DNS zone group linkage, purge protection, RBAC assignments, workload identity binding, and negative cross-tenant access tests. With public network access disabled as required by the security baseline, every tenant vault needs a reachable private data path and tightly scoped identity assignments from the moment it is provisioned.",
+      "failure_scenario": "Step 4 provisions only the shared platform Key Vault and one generic Key Vault private endpoint because the resource table still lists six static private endpoints. A new tenant is onboarded with a separate vault but no tenant-specific private endpoint or DNS linkage, so sandbox pods cannot mount secrets. To restore functionality, operators temporarily enable public network access or broaden shared identities, weakening the tenant isolation model that Round 1 introduced.",
+      "artifact_section": "Resource SKU Recommendations; Resources to Provision; Security Requirements for Implementation",
+      "suggested_mitigation": "Add a tenant-onboarding architecture requirement: each tenant Key Vault is created with soft delete, purge protection, RBAC mode, publicNetworkAccess disabled, a tenant-specific private endpoint or approved shared private-link pattern, private DNS zone group linkage, a tenant-scoped workload identity with no cross-tenant permissions, and automated negative tests for cross-tenant secret access. Replace the fixed private-endpoint count with baseline endpoints plus one Key Vault private endpoint per active tenant, or document the exact supported alternative."
+    }
+  ]
+}

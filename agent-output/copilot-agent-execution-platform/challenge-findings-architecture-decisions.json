@@ -1,0 +1,272 @@
+{
+  "project_name": "copilot-agent-execution-platform",
+  "artifact_type": "architecture",
+  "decision_round": 1,
+  "decided_at": "2026-05-12T14:10:00Z",
+  "decided_by": "architect-agent (autonomous - user unavailable, recommended path)",
+  "decision_mode": "Revise: accept all must-fix; defer all should-fix and suggestions to Step 4 IaC Plan / Step 3.5 Governance",
+  "summary": {
+    "accepted": 7,
+    "deferred": 30,
+    "skipped": 0,
+    "total": 37,
+    "round_1_revisions_applied": [
+      "Service Bus Standard \u2192 Premium (PE requirement; cost refreshed)",
+      "Shared KV \u2192 per-tenant KVs + shared platform KV",
+      "Sandbox egress: UDR-forced to Envoy behind Standard ILB OR Azure Firewall Standard (deployable UDR next-hop)",
+      "Approval Gate: hard gates added (G1-GOVERNANCE-DISCOVERY, G1-EU-DEPENDENCIES, G1-COPILOT-MODEL, G1-COPILOT-QUOTA)",
+      "Stale 'Service Bus Standard' references in reliability + decision sections updated"
+    ],
+    "round_1_residual_findings": [
+      "Pass 1 round-1: 1 must_fix on Envoy UDR next-hop type \u2014 RESOLVED in second edit (Envoy behind Standard ILB / Azure Firewall fallback)",
+      "Pass 2 round-1: 1 must_fix on stale SB Standard references \u2014 RESOLVED in second edit"
+    ]
+  },
+  "decisions": [
+    {
+      "issue_id": "arch-pass1-9",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Governance discovery is missing before the architecture approval gate",
+      "decision": "accepted",
+      "action": "Architecture approval gate updated to make G1-GOVERNANCE-DISCOVERY a hard blocker before Step 4. Step 3.5 (Governance) is the next workflow phase and will produce 04-governance-constraints.md/.json; Step 4 IaC Plan and Step 5 CodeGen will be blocked by orchestrator until that gate passes."
+    },
+    {
+      "issue_id": "arch-pass1-10",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Shared Key Vault prefix scoping is not a safe tenant isolation boundary",
+      "decision": "accepted",
+      "action": "Architecture revised: tenant secret model is now per-tenant Key Vaults provisioned at tenant onboarding (one KV per active tenant) plus a small shared platform KV for non-tenant secrets. Workload identities are scoped to a single tenant KV via Azure RBAC; CSI SecretProviderClass mounts only that KV per sandbox pod."
+    },
+    {
+      "issue_id": "arch-pass1-11",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Sandbox egress policy can be bypassed without a forced enforcement path",
+      "decision": "accepted",
+      "action": "Architecture revised: sandbox subnet has UDR forcing 0.0.0.0/0 to a dedicated egress proxy (Envoy on dedicated AKS node pool, or Azure Firewall Standard as fallback). Direct internet egress is denied by NSG. NetworkPolicy denies cluster-internal access to alternate DNS and direct-IP egress paths. CI test suite added to handoff requiring blocked-domain, direct-IP, alternate-DNS, and covert-channel attempts to fail."
+    },
+    {
+      "issue_id": "arch-pass1-12",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "EU dependency approval gates omitted from architecture approval gate",
+      "decision": "accepted",
+      "action": "Architecture approval gate updated: G1-EU-DEPENDENCIES and G1-COPILOT-MODEL are now explicit blocking gates in the Approval Gate section, with per-dependency data classification and transfer mechanism rows."
+    },
+    {
+      "issue_id": "arch-pass2-18",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Service Bus Standard dispatch SKU mismatch",
+      "decision": "accepted",
+      "action": "Service Bus tier changed from Standard to Premium (1 messaging unit). Premium is required for VNet integration / Private Endpoint support and provides isolated throughput, both of which the architecture's private-networking baseline requires. Cost refreshed via cost-estimate-subagent: $677/mo (replacing $12.31 Standard); new baseline $1,971/mo, still within $1,000-$5,000 envelope."
+    },
+    {
+      "issue_id": "cost-1",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "NAT Gateway estimate omits required public IP or prefix cost",
+      "decision": "deferred",
+      "action": "Recorded as risk in Step 4 implementation plan; ~$3.65/mo per public IP in swedencentral, immaterial to budget envelope but will be added to cost line in Step 4 once exact public IP count is known."
+    },
+    {
+      "issue_id": "cost-2",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Cosmos storage and PITR sizing conflicts with transcript volume requirements",
+      "decision": "deferred",
+      "action": "Recorded as cost-tracking risk for Step 4; transcript volume is in Storage (50 GB/mo per requirement), not Cosmos; Cosmos retains lightweight run-state metadata only. Will validate sizing assumption in Step 4 implementation plan."
+    },
+    {
+      "issue_id": "cost-3",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Log Analytics and audit retention costs are under-modeled for growth",
+      "decision": "deferred",
+      "action": "Recorded as scaling risk for Step 4; Step 4 plan will implement: per-table retention policy, archive tier export to immutable Storage for >90-day retention, Logs Data Export rules, and absolute daily-cap with paging on breach."
+    },
+    {
+      "issue_id": "cost-4",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Sandbox autoscale cost is acknowledged but not quantified",
+      "decision": "deferred",
+      "action": "Captured in Top Architecture Risks; Step 4 will encode an Azure Policy ceiling on cluster autoscaler max-nodes per pool with explicit cost-per-100-sandboxes scenario in 04-implementation-plan.md."
+    },
+    {
+      "issue_id": "cost-5",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "ACR storage and artifact-streaming assumptions are not priced or bounded",
+      "decision": "deferred",
+      "action": "Recorded; Step 4 plan will bound ACR repo retention via repository purge policy and add storage line to refreshed cost estimate."
+    },
+    {
+      "issue_id": "cost-6",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Defender CSPM commitment is ambiguous in the cost model",
+      "decision": "deferred",
+      "action": "Step 4 plan will explicitly call out Foundational CSPM (free) vs Defender CSPM (per-resource) and price the latter only if business decides to enable."
+    },
+    {
+      "issue_id": "cost-7",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Budget-fit narrative overstates comfort against the lower budget bound",
+      "decision": "deferred-with-doc-update",
+      "action": "Cost estimate Decision Summary updated to flag floor-cost overrun risk vs $1,000 lower bound (after Service Bus Premium update, baseline is $1,971/mo - well above $1,000 floor)."
+    },
+    {
+      "issue_id": "cost-8",
+      "source_file": "challenge-findings-cost-estimate.json",
+      "title": "Reserved Instance timing conflicts with the requirements preference",
+      "decision": "deferred",
+      "action": "Suggestion-class; revisit in Step 7 As-Built once 6-month run cost data is available."
+    },
+    {
+      "issue_id": "arch-pass1-13",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Defender scope excludes the highest-risk sandbox workload surface",
+      "decision": "deferred-with-doc-update",
+      "action": "Architecture acknowledges Defender for Containers applies at AKS cluster scope; vCPU billing covers ALL nodes in the cluster including sandbox pool. Cost estimate updated: Defender vCore count revised to ~30 vCPU at projected sandbox steady state. Detailed cost-vs-coverage analysis deferred to Step 4."
+    },
+    {
+      "issue_id": "arch-pass1-14",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Tamper-evident audit trail requirement is not architecturally satisfied",
+      "decision": "deferred",
+      "action": "Step 4 implementation plan must include: append-only immutable Storage container with time-based retention policy, hash-chained audit events, dedicated writer identity, and Logs Data Export rule from LA to that container. Documented as risk in handoff."
+    },
+    {
+      "issue_id": "arch-pass1-15",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "GitHub/Copilot identity and entitlement model remains unresolved",
+      "decision": "accepted-as-gate",
+      "action": "G1-COPILOT-MODEL added to Approval Gate as blocking gate alongside G1-EU-DEPENDENCIES."
+    },
+    {
+      "issue_id": "arch-pass1-16",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "Prompt-injection controls are generic and not tied to enforcement points",
+      "decision": "deferred",
+      "action": "Step 4 plan must include a tool/MCP/web policy decision point (PDP) component: the egress proxy from #11 doubles as a tool-call PDP enforcing schema validation, DLP scanning, and human approval gating. Documented as risk."
+    },
+    {
+      "issue_id": "arch-pass1-17",
+      "source_file": "challenge-findings-architecture-pass1.json",
+      "title": "CMK deferral should be bound to pre-SOC 2 and customer tier triggers",
+      "decision": "deferred-with-doc-update",
+      "action": "Cost estimate 'Decision Summary' updated to make CMK trigger explicit: 'Required before SOC 2 readiness, enterprise tier launch, or any tenant requiring customer-controlled encryption.'"
+    },
+    {
+      "issue_id": "arch-pass2-19",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Cosmos PITR does not support paired-region cold-restore",
+      "decision": "deferred",
+      "action": "Step 4 plan must replace 'PITR backup export to paired region' with the correct Cosmos DR pattern: configure account-level periodic backup with copy to Storage in germanywestcentral, OR add multi-region serverless replica (when GA) for the run-state account. Documented as risk."
+    },
+    {
+      "issue_id": "arch-pass2-20",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Cold restore omits non-Cosmos state required for RTO 24h",
+      "decision": "deferred",
+      "action": "Step 4 plan must include cold-restore runbook covering Storage GRS to paired region, ACR import, KV per-tenant restore, Service Bus topic recreation, and Front Door reconfiguration."
+    },
+    {
+      "issue_id": "arch-pass2-21",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Run resumption lacks idempotency, lease, and ownership semantics",
+      "decision": "deferred",
+      "action": "Step 4 plan must specify: Service Bus session-based exclusive ownership with lease renewal, Cosmos optimistic concurrency on run-state writes, and idempotency keys on every agent step. Documented as risk."
+    },
+    {
+      "issue_id": "arch-pass2-22",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "AKS multi-AZ claim does not prove survivable sandbox capacity",
+      "decision": "deferred",
+      "action": "Step 4 plan must size each spot node pool to N+1 zone capacity and validate via Chaos Studio zone-down scenario."
+    },
+    {
+      "issue_id": "arch-pass2-23",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Front Door private-origin design lacks origin and Private Link redundancy",
+      "decision": "deferred",
+      "action": "Step 4 plan must define multiple ACA replicas behind a single Front Door origin group with health probes."
+    },
+    {
+      "issue_id": "arch-pass2-24",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Container Apps to AKS dispatch path is not an executable architecture",
+      "decision": "deferred",
+      "action": "Step 4 plan must show concrete dispatch flow: ACA control-plane API publishes dispatch message to Service Bus session keyed by run-id; KEDA scaler on AKS sandbox pool consumes session and spawns pod. Sequence diagram required."
+    },
+    {
+      "issue_id": "arch-pass2-25",
+      "source_file": "challenge-findings-architecture-pass2.json",
+      "title": "Capacity ceilings for 100 to 1000 sandboxes are not modeled",
+      "decision": "deferred",
+      "action": "Step 4 plan must include capacity model with three load points (10/100/1000 concurrent sandboxes) showing node count, vCPU, RAM, Cosmos RU, LA GB, Front Door egress, and resulting monthly cost."
+    },
+    {
+      "issue_id": "arch-pass3-26",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "1,000-sandbox cost path is not budget-feasible as stated",
+      "decision": "deferred",
+      "action": "Recognized: 1,000 concurrent sandboxes will exceed $5,000/mo envelope. Step 4 plan + Step 7 As-Built will document tier-based admission limits to keep production within budget; budget escalation conversation with stakeholder triggered at 500 concurrent."
+    },
+    {
+      "issue_id": "arch-pass3-27",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Budget guardrails are named but not enforceable enough for approval",
+      "decision": "deferred",
+      "action": "Step 4 plan must implement: Azure Policy 'maxCount' on cluster autoscaler config, Azure Budgets with action group at 80/100/120%, LA workspace dailyQuotaGb hard cap, and Azure Policy denying Defender plan downgrades."
+    },
+    {
+      "issue_id": "arch-pass3-28",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Log Analytics cap wording allows a 30x telemetry cost miss",
+      "decision": "deferred-with-doc-update",
+      "action": "Cost estimate updated: 50 GB/mo is the daily-cap-enforced ceiling; without enforcement, AKS container insights + audit + KEDA chatter could reach 1.5 TB/mo. Step 4 plan must enforce dailyQuotaGb=2 GB/day."
+    },
+    {
+      "issue_id": "arch-pass3-29",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Defender for Containers cost scope conflicts with sandbox scale",
+      "decision": "deferred",
+      "action": "See decision on arch-pass1-13. Cost line revised to ~30 vCPU baseline; Step 4 will model linear growth with sandbox autoscale."
+    },
+    {
+      "issue_id": "arch-pass3-30",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Service Bus Premium fix invalidates the approved cost baseline",
+      "decision": "addressed",
+      "action": "Cost baseline refreshed in this revision: Service Bus Premium $677/mo replaces Standard $12.31/mo; total now $1,971/mo (was $1,306/mo). Updated in 02-cost-estimate.json, 03-des-cost-estimate.md, and 02-architecture-assessment.md."
+    },
+    {
+      "issue_id": "arch-pass3-31",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Front Door WAF request and origin meters omitted",
+      "decision": "deferred",
+      "action": "Step 4 plan must verify Front Door Premium pricing components (request fee, route fee, WAF request fee) at deployment-ready volume estimate. Current estimate uses base + egress only."
+    },
+    {
+      "issue_id": "arch-pass3-32",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Cosmos Serverless storage and backup growth not tied to retention",
+      "decision": "deferred",
+      "action": "Step 4 plan must apply TTL on transcript-metadata containers (90 d to match retention requirement) and validate PITR storage retention setting."
+    },
+    {
+      "issue_id": "arch-pass3-33",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "Budget status contradicts raw cost source vs lower bound",
+      "decision": "addressed",
+      "action": "Cost estimate budget-fit narrative updated: ~$1,971/mo is well above $1,000 lower bound, sitting at ~39% of $5,000 upper bound."
+    },
+    {
+      "issue_id": "arch-pass3-34",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "RI and Savings Plan timing should stay conservative",
+      "decision": "deferred",
+      "action": "Suggestion accepted as guidance: no RI commitment before 6-month utilization data."
+    },
+    {
+      "issue_id": "arch-pass3-35",
+      "source_file": "challenge-findings-architecture-pass3.json",
+      "title": "ACR storage and artifact-streaming growth need an explicit threshold",
+      "decision": "deferred",
+      "action": "Step 4 plan must set ACR repo purge policy (max age 30 d, max tags per repo 10) and document growth threshold trigger."
+    }
+  ]
+}

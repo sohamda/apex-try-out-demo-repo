@@ -1,0 +1,226 @@
+{
+  "status": "COMPLETE",
+  "project_name": "copilot-agent-execution-platform",
+  "region": "swedencentral",
+  "currency": "USD",
+  "monthly_total": 1970.86,
+  "yearly_total": 23650.32,
+  "resources": [
+    {
+      "name": "AKS Cluster - Standard uptime SLA tier",
+      "service_name": "Azure Kubernetes Service",
+      "sku": "Standard Uptime SLA",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.1,
+      "monthly_cost": 73.0,
+      "notes": "pricing_get fallback (azure_bulk_estimate unavailable in this MCP surface); meter=Standard Uptime SLA; 730h"
+    },
+    {
+      "name": "AKS node pool - VM Standard_D2as_v5 (system pool)",
+      "service_name": "Virtual Machines",
+      "sku": "Standard_D2as_v5",
+      "region": "swedencentral",
+      "quantity": 3,
+      "hourly_rate": 0.092,
+      "monthly_cost": 201.48,
+      "ri_1yr_savings": 48.35,
+      "ri_3yr_savings": 90.67,
+      "notes": "pricing_get fallback; Linux PAYG meter D2as v5; 3 nodes x 730h"
+    },
+    {
+      "name": "AKS node pool - VM Standard_D2as_v5 (control-plane workloads)",
+      "service_name": "Virtual Machines",
+      "sku": "Standard_D2as_v5",
+      "region": "swedencentral",
+      "quantity": 2,
+      "hourly_rate": 0.092,
+      "monthly_cost": 134.32,
+      "ri_1yr_savings": 32.24,
+      "ri_3yr_savings": 60.45,
+      "notes": "pricing_get fallback; Linux PAYG meter D2as v5; 2 nodes x 730h"
+    },
+    {
+      "name": "AKS node pool - VM Standard_D4as_v5 SPOT (sandbox pool)",
+      "service_name": "Virtual Machines",
+      "sku": "Standard_D4as_v5 Spot",
+      "region": "swedencentral",
+      "quantity": 4,
+      "hourly_rate": 0.034003,
+      "monthly_cost": 99.29,
+      "notes": "pricing_get fallback; Spot meter D4as v5 Spot; 4 nodes x 730h"
+    },
+    {
+      "name": "Azure Container Apps - Workload Profiles environment (consumption)",
+      "service_name": "Azure Container Apps",
+      "sku": "Standard Consumption",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 43.2,
+      "notes": "pricing_get fallback; vCPU Active Usage=0.000024/sec and Memory Active Usage=0.000003/GiB-sec; usage: 400 vCPU-hours + 800 GiB-hours"
+    },
+    {
+      "name": "Azure Container Registry - Premium",
+      "service_name": "Container Registry",
+      "sku": "Premium",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.069441,
+      "monthly_cost": 50.69,
+      "notes": "pricing_get fallback; meter Premium Registry Unit=1.6666/day converted using 730h"
+    },
+    {
+      "name": "Service Bus - Premium tier",
+      "service_name": "Service Bus",
+      "sku": "Premium (1 messaging unit)",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.9275,
+      "monthly_cost": 677.08,
+      "notes": "Revised round 1 from Standard to Premium per challenger pass-2 finding (Standard does not support Private Endpoint / VNet integration). 1 Premium Messaging Unit at $0.9275/hour x 730 hours; no separate Premium operations meter; geo-DR transfer meters excluded."
+    },
+    {
+      "name": "Cosmos DB for NoSQL - Serverless + PITR",
+      "service_name": "Azure Cosmos DB",
+      "sku": "Serverless",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 24.25,
+      "notes": "pricing_get fallback; 1M RUs=0.305 (50M RU), Data Stored=0.25/GB-month (20GB), PITR Continuous Backup=0.2/GB (20GB)"
+    },
+    {
+      "name": "Storage Account - Standard_ZRS Hot/Cool + transactions",
+      "service_name": "Storage",
+      "sku": "Standard ZRS",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 5.22,
+      "notes": "pricing_get fallback; ZRS Data Stored approximated for 150GB at 0.03/GB-month + operations 0.00036 per 10K for 20M tx"
+    },
+    {
+      "name": "Key Vault - Standard",
+      "service_name": "Key Vault",
+      "sku": "Standard",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 15.0,
+      "notes": "pricing_get fallback; Operations meter 0.03 per 10K; usage 5M operations/mo"
+    },
+    {
+      "name": "Azure Front Door - Premium profile + WAF Premium policy + egress",
+      "service_name": "Azure Front Door Service",
+      "sku": "Premium",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 371.25,
+      "notes": "pricing_get fallback; Premium Base Fees=330/month (Zone 1) + Premium Data Transfer Out first tier=0.0825/GB for 500GB. No separate WAF policy meter was returned by pricing_get on this endpoint; assumed covered by Premium base fee for this estimate."
+    },
+    {
+      "name": "Log Analytics Workspace - PAYG Analytics",
+      "service_name": "Log Analytics",
+      "sku": "Standard",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 115.0,
+      "notes": "pricing_get fallback; Standard Data Analyzed=2.3/GB; usage 50GB ingestion/mo"
+    },
+    {
+      "name": "Microsoft Defender for Containers",
+      "service_name": "Microsoft Defender for Cloud",
+      "sku": "Standard vCore",
+      "region": "swedencentral",
+      "quantity": 10,
+      "hourly_rate": 0.00941,
+      "monthly_cost": 68.69,
+      "notes": "pricing_get fallback; Standard vCore vCore Pack, 10 vCPUs x 730h"
+    },
+    {
+      "name": "Microsoft Defender for Key Vault",
+      "service_name": "Microsoft Defender for Cloud",
+      "sku": "Per node Std",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.00034,
+      "monthly_cost": 0.25,
+      "notes": "pricing_get fallback; Per node Std Node at 730h"
+    },
+    {
+      "name": "Microsoft Defender for Storage",
+      "service_name": "Microsoft Defender for Cloud",
+      "sku": "Standard",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 2.98,
+      "notes": "pricing_get fallback; Standard Transactions=0.1492 per 1M. Assumed 20M transactions/mo aligned to stated storage workload."
+    },
+    {
+      "name": "Private Endpoint - 6 endpoints + data processed",
+      "service_name": "Virtual Network",
+      "sku": "Private Endpoint",
+      "region": "swedencentral",
+      "quantity": 6,
+      "hourly_rate": 0.01,
+      "monthly_cost": 44.3,
+      "notes": "pricing_get fallback; Standard Private Endpoint=0.01/hour (Global) + Standard Data Processed ingress=0.01/GB for 50GB"
+    },
+    {
+      "name": "Private DNS Zone - 6 zones",
+      "service_name": "Azure DNS",
+      "sku": "Private",
+      "region": "swedencentral",
+      "quantity": 6,
+      "hourly_rate": 0.0,
+      "monthly_cost": 3.0,
+      "notes": "pricing_get fallback; Private Zone=0.5 per zone-month used for first-tier estimate"
+    },
+    {
+      "name": "NAT Gateway - 1 gateway + data processed",
+      "service_name": "NAT Gateway",
+      "sku": "Standard",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.045,
+      "monthly_cost": 41.85,
+      "notes": "pricing_get fallback; Standard Gateway=0.045/hour + Standard Data Processed=0.045/GB for 200GB"
+    },
+    {
+      "name": "Virtual Network - baseline",
+      "service_name": "Virtual Network",
+      "sku": "Base",
+      "region": "swedencentral",
+      "quantity": 1,
+      "hourly_rate": 0.0,
+      "monthly_cost": 0.0,
+      "notes": "static_fallback: VNet base has no recurring charge"
+    }
+  ],
+  "optimization_notes": [
+    "Tooling substitution: azure_bulk_estimate and azure_price_search were not exposed by this MCP endpoint; pricing_get was used per line to complete the estimate.",
+    "RI/Savings Plan applicability is strongest for steady VM-backed AKS pools (Standard_D2as_v5).",
+    "Front Door WAF policy did not return a standalone meter in pricing_get for this query surface; estimate assumes Premium base fee coverage.",
+    "Round 1 revision (2026-05-12): Service Bus changed from Standard ($12.31/mo) to Premium ($677.08/mo) to satisfy Private Endpoint / VNet-integration requirement."
+  ],
+  "savings_status": "QUANTIFIED",
+  "savings_reason": "1-year and 3-year savings quantified for VM-backed AKS node pools using returned savingsPlan rates on Standard_D2as_v5.",
+  "eligible_strategies": [
+    "Reserved Instances / Savings Plan for AKS VM node pools",
+    "Spot usage expansion for non-critical AKS workloads",
+    "Log volume tuning in Log Analytics",
+    "Front Door traffic/request optimization"
+  ],
+  "data_source": "Azure Pricing MCP (pricing_get)",
+  "queried_at": "2026-05-12T00:00:00Z",
+  "confidence": "Medium",
+  "unresolved_items": [],
+  "mcp_calls_used": 34,
+  "budget_exceeded": true,
+  "ri_1yr_savings": 80.59,
+  "ri_3yr_savings": 151.11
+}
